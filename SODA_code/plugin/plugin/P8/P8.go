@@ -15,60 +15,55 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var	dependecy_map map[int]map[string]int   // store timestamp and number result
 
-type RunOpCode struct {
-	MethodName string   `json:"methodname"`
-	OpCode     []string `json:"option"`
+type RegisterInfo struct {
+	PluginName string   `json:"pluginname"`
+	OpCode     map[string]string `json:"option"`
 }
 
-func Run() []byte {
+func Register() []byte {
 	// fmt.Println("enter run")
-	var data = RunOpCode{
-		MethodName: "P8",
-		OpCode: []string{"TXSTART", "handleIAL_COMPARISON", "NUMBER", "TIMESTAMP"},
+	var data = RegisterInfo{
+		PluginName: "P8",
+		OpCode: map[string]string{"TXSTART":"handle_TXSTART", "IAL_COMPARISON":"handle_COMPARISON", "NUMBER":"handle_NUMBERTIME", "TIMESTAMP":"handle_NUMBERTIME"},
 	}
 
 	dependecy_map = make(map[int]map[string]int)
 
-	b, err := json.Marshal(&data)
+	retInfo, err := json.Marshal(&data)
 	if err != nil {
 		return nil
 	}
 
-	return b
+	return retInfo
 }
 
-func Recv(m *collector.CollectorDataT) (byte ,string) {
-	// 记录下当前的txhash，块高以及时间戳
-	if m.Option == "TXSTART" {
-		dependecy_map = make(map[int]map[string]int)
-		return 0x00,""
-	}
+func handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
+	dependecy_map = make(map[int]map[string]int)
+	return 0x00,""
+}
 
-	if m.Option == "NUMBER" || m.Option == "TIMESTAMP"{
-		current_layer := m.InsInfo.CallLayer
-		need_result := m.InsInfo.OpResult
-		if _,ok := dependecy_map[current_layer]; ok{
-			dependecy_map[current_layer][need_result] = 0
-		}else{
-			temp_map := make(map[string]int)
-			temp_map[need_result] = 0
-			dependecy_map[current_layer] = temp_map
-		}
-		return 0x00,""
+func handle_NUMBERTIME(m *collector.CollectorDataT) (byte ,string){
+	current_layer := m.InsInfo.CallLayer
+	need_result := m.InsInfo.OpResult
+	if _,ok := dependecy_map[current_layer]; ok{
+		dependecy_map[current_layer][need_result] = 0
+	}else{
+		temp_map := make(map[string]int)
+		temp_map[need_result] = 0
+		dependecy_map[current_layer] = temp_map
 	}
+	return 0x00,""
+}
 
-	if m.Option == "handleIAL_COMPARISON" {
-		current_layer := m.InsInfo.CallLayer
-		if _, ok := dependecy_map[current_layer]; ok{
-			for _,i_str := range m.InsInfo.OpArgs{
-				if _, ok1 := dependecy_map[current_layer][i_str]; ok1 {
-					return 0x01,""
-				}
+func handle_COMPARISON(m *collector.CollectorDataT) (byte ,string){
+	current_layer := m.InsInfo.CallLayer
+	if _, ok := dependecy_map[current_layer]; ok{
+		for _,i_str := range m.InsInfo.OpArgs{
+			if _, ok1 := dependecy_map[current_layer][i_str]; ok1 {
+				return 0x01,""
 			}
 		}
-		
-		return 0x00,""
 	}
-
+	
 	return 0x00,""
 }

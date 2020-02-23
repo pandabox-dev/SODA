@@ -18,27 +18,27 @@ var contract_map map[string]string
 var layer_dict map[int]string
 
 
-type RunOpCode struct {
-	MethodName string   `json:"methodname"`
-	OpCode     []string `json:"option"`
+type RegisterInfo struct {
+	PluginName string   `json:"pluginname"`
+	OpCode     map[string]string `json:"option"`
 }
 
-func Run() []byte {
+func Register() []byte {
 	
-	var data = RunOpCode{
-		MethodName: "P5",
-		OpCode:     []string{"handleIAL_BYTECODE","TXSTART","CALLSTART","CALLCODESTART","DELEGATECALLSTART","CALLEND","CALLCODEEND","DELEGATECALLEND"},
+	var data = RegisterInfo{
+		PluginName: "P5",
+		OpCode: map[string]string{"IAL_BYTECODE":"handle_BYTECODE","TXSTART":"handle_TXSTART","CALLSTART":"handle_CALLINFO","CALLCODESTART":"handle_CALLINFO","DELEGATECALLSTART":"handle_CALLINFO","CALLEND":"handle_CALLEND","CALLCODEEND":"handle_CALLEND","DELEGATECALLEND":"handle_CALLEND"},
 	}
 
 	contract_map = make(map[string]string)
 	bytecodeHash_map = make(map[string]map[uint64]int)
 	// fmt.Println(bytecodeHash_map)
-	b, err := json.Marshal(&data)
+	retInfo, err := json.Marshal(&data)
 	if err != nil {
 		return []byte{}
 	}
 
-	return b
+	return retInfo
 }
 
 func check_return_value(runtimecode []byte) map[uint64]int {
@@ -201,80 +201,55 @@ func PcInDict(pc uint64, bytecodeHash string) int {
 	return 0
 }
 
-
-func Recv(m *collector.CollectorDataT) (byte ,string) {
-	
-	if m.Option == "handleIAL_BYTECODE" {	
-		if m.TransInfo.CallType == "CREATE" {
-			contract := m.TransInfo.To
-			contract = strings.ToLower(contract)
-			runtimecode := m.TransInfo.CreateInfo.ContractRuntimeCode
-			if len(runtimecode) > 0{
-				bytecodeHash := Fnvhash(runtimecode)
-				if _, ok := bytecodeHash_map[bytecodeHash];!ok{
-					pc_dict := check_return_value(runtimecode)
-					bytecodeHash_map[bytecodeHash] = pc_dict
-					contract_map[contract] = bytecodeHash
-				}else{
-					contract_map[contract] = bytecodeHash
-				}
-			}
-		}	
-	}
-
-
-	// if m.Option == "TRANS_CALL" || m.Option == "TRANS_CALLCODE" || m.Option == "TRANS_DELEGATECALL"{
-	// 	if m.TransInfo.CallType == "CALL"{
-	// 		contract := m.TransInfo.From
-	// 		toaddr := m.TransInfo.To
-	// 		contract = strings.ToLower(contract)
-	// 		pc := m.TransInfo.Pc 
-	// 		if len(m.TransInfo.CallInfo.ContractCode) > 0{
-	// 			if _, ok := contract_map[contract];ok{
-	// 				bytecodeHash := contract_map[contract]
-	// 				get_result := PcInDict(pc, bytecodeHash)
-	// 				issuccess := m.TransInfo.IsSuccess
-	// 				if (get_result == 1) && (issuccess == false){
-	// 					return 0x01,contract + "#" + toaddr +"#"+fmt.Sprintf("%v", pc)
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-		
-		
-	// }
-
-	if m.Option == "TXSTART" {
-		layer_dict = make(map[int]string)
-		// txhash = m.ExternalInfo.TxHash
-	}
-
-	if m.Option == "CALLSTART" || m.Option == "CALLCODESTART" || m.Option =="DELEGATECALLSTART" {
-		contract := m.InsInfo.From
-		toaddr := m.InsInfo.To
+func handle_BYTECODE(m *collector.CollectorDataT) (byte ,string){
+	if m.TransInfo.CallType == "CREATE" {
+		contract := m.TransInfo.To
 		contract = strings.ToLower(contract)
-		pc := m.InsInfo.Pc 
-		layer := m.InsInfo.CallLayer
-		bytecodeHash := contract_map[contract]
-		if len(m.InsInfo.ByteCode) > 0{
-			get_result := PcInDict(pc, bytecodeHash)
-			if get_result == 1{
-				layer_dict[layer] = contract + "#" + toaddr +"#"+ strconv.Itoa(layer)+"#"+fmt.Sprintf("%v", pc)
+		runtimecode := m.TransInfo.CreateInfo.ContractRuntimeCode
+		if len(runtimecode) > 0{
+			bytecodeHash := Fnvhash(runtimecode)
+			if _, ok := bytecodeHash_map[bytecodeHash];!ok{
+				pc_dict := check_return_value(runtimecode)
+				bytecodeHash_map[bytecodeHash] = pc_dict
+				contract_map[contract] = bytecodeHash
+			}else{
+				contract_map[contract] = bytecodeHash
 			}
-		} 
-	}
+		}
+	}	
+	return 0X00,""
+}
 
-	if m.Option == "CALLEND" || m.Option == "CALLCODEEND" || m.Option == "DELEGATECALLEND"{
-		layer := m.InsInfo.CallLayer
-		issuccess := m.InsInfo.IsInternalSucceeded
-		if _,ok := layer_dict[layer];ok{
-			if !issuccess {
-				return 0x01,layer_dict[layer]
-			}
+func handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
+	layer_dict = make(map[int]string)
+	return 0x00,""
+}
+
+func handle_CALLINFO(m *collector.CollectorDataT) (byte ,string){
+	contract := m.InsInfo.From
+	toaddr := m.InsInfo.To
+	contract = strings.ToLower(contract)
+	pc := m.InsInfo.Pc 
+	layer := m.InsInfo.CallLayer
+	bytecodeHash := contract_map[contract]
+	if len(m.InsInfo.ByteCode) > 0{
+		get_result := PcInDict(pc, bytecodeHash)
+		if get_result == 1{
+			layer_dict[layer] = contract + "#" + toaddr +"#"+ strconv.Itoa(layer)+"#"+fmt.Sprintf("%v", pc)
+		}
+	}
+	return 0x00,"" 
+}
+
+func handle_CALLEND(m *collector.CollectorDataT) (byte ,string) {
+	layer := m.InsInfo.CallLayer
+	issuccess := m.InsInfo.IsInternalSucceeded
+	if _,ok := layer_dict[layer];ok{
+		if !issuccess {
+			return 0x01,layer_dict[layer]
 		}
 	}
 
-	
 	return 0x00,""
 }
 

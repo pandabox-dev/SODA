@@ -114,28 +114,28 @@ func Fnvhash(bytecode []byte) string{
 	return hex.EncodeToString(result.Sum(nil))
 }
 
-type RunOpCode struct {
-	MethodName string   `json:"methodname"`
-	OpCode     []string `json:"option"`
+type RegisterInfo struct {
+	PluginName string   `json:"pluginname"`
+	OpCode     map[string]string `json:"option"`
 }
 
 // 插件入口函数
-func Run() []byte {
+func Register() []byte {
 	// fmt.Println("plugin run")
-	var data = RunOpCode{
-		MethodName: "P2",
-		OpCode: []string{"handleIAL_BYTECODE","handleIAL_INVOKE"},
+	var data = RegisterInfo{
+		PluginName: "P2",
+		OpCode: map[string]string{"IAL_BYTECODE":"handle_BYTECODE","IAL_INVOKE":"handle_INVOKE"},
 	}
 	bytecodeHash_map = make(map[string]map[string]int)
 
-	b, err := json.Marshal(&data)
+	retInfo, err := json.Marshal(&data)
 	if err != nil {
 		fmt.Println(err)
 		// panic(err)
 	}
 	//fmt.Println(b)
 
-	return b
+	return retInfo
 }
 
 // judge if the method is in the jump dict
@@ -179,32 +179,27 @@ func add_to_dict(runtimecode []byte) {
 	}
 }
 
-//return 0X01 结束
-func Recv(m *collector.CollectorDataT) (byte ,string) {
-	if m.Option == "handleIAL_INVOKE"{
-		if m.TransInfo.CallType == "CALL"{   // external call, get contract name and input, check if the method is in the jumptable
-			input := hex.EncodeToString(m.TransInfo.CallInfo.InputData)
-			if len(m.TransInfo.CallInfo.ContractCode) > 0{
-				bytecodeHash := Fnvhash(m.TransInfo.CallInfo.ContractCode)
-				get_result := InJump(input, bytecodeHash)
-				if get_result == "1"{
-					return 0x01,input[0:8]
-				}	
-			}					
-		}
-		return 0x00,""
+func handle_INVOKE(m *collector.CollectorDataT) (byte ,string){
+	if m.TransInfo.CallType == "CALL"{   // external call, get contract name and input, check if the method is in the jumptable
+		input := hex.EncodeToString(m.TransInfo.CallInfo.InputData)
+		if len(m.TransInfo.CallInfo.ContractCode) > 0{
+			bytecodeHash := Fnvhash(m.TransInfo.CallInfo.ContractCode)
+			get_result := InJump(input, bytecodeHash)
+			if get_result == "1"{
+				return 0x01,input[0:8]
+			}	
+		}					
 	}
-
-	if m.Option == "handleIAL_BYTECODE"{
-		if m.TransInfo.CallType == "CREATE"{
-			runtimecode := m.TransInfo.CreateInfo.ContractRuntimeCode
-			if len(runtimecode) > 0{
-				add_to_dict(runtimecode)
-			}
-		}
-		return 0x00,""
-	}
-
-
 	return 0x00,""
 }
+
+func handle_BYTECODE(m *collector.CollectorDataT) (byte ,string) {
+	if m.TransInfo.CallType == "CREATE"{
+		runtimecode := m.TransInfo.CreateInfo.ContractRuntimeCode
+		if len(runtimecode) > 0{
+			add_to_dict(runtimecode)
+		}
+	}
+	return 0x00,""
+}
+

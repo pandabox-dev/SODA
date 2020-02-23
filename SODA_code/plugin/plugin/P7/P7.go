@@ -19,24 +19,24 @@ var (
 	balance_layer	int
 )
 
-type RunOpCode struct {
-	MethodName string   `json:"methodname"`
-	OpCode     []string `json:"option"`
+type RegisterInfo struct {
+	PluginName string   `json:"pluginname"`
+	OpCode     map[string]string `json:"option"`
 }
 
-func Run() []byte {
-	var data = RunOpCode{
-		MethodName: "P7",
-		OpCode: []string{"TXSTART", "NOT", "LT", "GT", "SLT", "SGT" ,"BALANCE", "EQ", "ISZERO"},
+func Register() []byte {
+	var data = RegisterInfo{
+		PluginName: "P7",
+		OpCode: map[string]string{"TXSTART":"handle_TXSTART", "NOT":"handle_COMPARE", "LT":"handle_COMPARE", "GT":"handle_COMPARE", "SLT":"handle_COMPARE", "SGT":"handle_COMPARE", "BALANCE":"handle_BALANCE", "EQ":"handle_EQ", "ISZERO":"handle_COMPARE"},
 	}
 	initial()
 
-	b, err := json.Marshal(&data)
+	retInfo, err := json.Marshal(&data)
 	if err != nil {
 		return nil
 	}
 
-	return b
+	return retInfo
 }
 
 
@@ -46,44 +46,40 @@ func initial() {
 	balance_layer = 0
 }
 
-func Recv(m *collector.CollectorDataT) (byte ,string) {
-	if m.Option == "TXSTART" {
-		initial()
-		return 0x00,""
-	}
+func handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
+	initial()
+	return 0x00,""
+}
 
-	if m.Option == "BALANCE" {
-		if m.InsInfo.OpResult != ""{
-			cmp_flag = 0
-			balance_layer = m.InsInfo.CallLayer
-			balance = m.InsInfo.OpResult
-		}
-		return 0x00,""
+func handle_BALANCE(m *collector.CollectorDataT) (byte ,string){
+	if m.InsInfo.OpResult != ""{
+		cmp_flag = 0
+		balance_layer = m.InsInfo.CallLayer
+		balance = m.InsInfo.OpResult
 	}
+	return 0x00,""
+}
 
-	if m.Option == "EQ"{
-		if len(m.InsInfo.OpArgs) == 2 && cmp_flag == 0{ 
-			result_flag := 0
-			current_layer := m.InsInfo.CallLayer
-			if current_layer == balance_layer{
-				for _,eq_str := range m.InsInfo.OpArgs {
-					if balance == eq_str{
-						result_flag = 1
-					}
+func handle_EQ(m *collector.CollectorDataT) (byte ,string){
+	if len(m.InsInfo.OpArgs) == 2 && cmp_flag == 0{ 
+		result_flag := 0
+		current_layer := m.InsInfo.CallLayer
+		if current_layer == balance_layer{
+			for _,eq_str := range m.InsInfo.OpArgs {
+				if balance == eq_str{
+					result_flag = 1
 				}
 			}
-			if result_flag == 1 {
-				return 0x01,""
-			}
 		}
-		balance = ""
-		return 0x00,""
+		if result_flag == 1 {
+			return 0x01,""
+		}
 	}
+	balance = ""
+	return 0x00,""
+}
 
-	if m.Option == "NOT" || m.Option == "LT" || m.Option == "GT" || m.Option == "SLT" || m.Option == "SGT" || m.Option == "ISZERO"{
-		cmp_flag = 1
-		return 0x00,""
-	}
-
+func handle_COMPARE(m *collector.CollectorDataT) (byte ,string) {
+	cmp_flag = 1
 	return 0x00,""
 }

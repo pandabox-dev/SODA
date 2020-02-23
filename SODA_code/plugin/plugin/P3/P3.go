@@ -18,27 +18,27 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 
-type RunOpCode struct {
-	MethodName string   `json:"methodname"`
-	OpCode     []string `json:"option"`
+type RegisterInfo struct {
+	PluginName string   `json:"pluginname"`
+	OpCode     map[string]string `json:"option"`
 }
 
 // 插件入口函数
-func Run() []byte {
+func Register() []byte {
 	// fmt.Println("plugin run")
-	var data = RunOpCode{
-		MethodName: "P3",
-		OpCode: []string{"handleIAL_INVOKE"},
+	var data = RegisterInfo{
+		PluginName: "P3",
+		OpCode: map[string]string{"IAL_INVOKE":"handle_INVOKE"},
 	}
 
-	b, err := json.Marshal(&data)
+	retInfo, err := json.Marshal(&data)
 	if err != nil {
 		fmt.Println(err)
 		// panic(err)
 	}
 	//fmt.Println(b)
 
-	return b
+	return retInfo
 }
 
 // judge the lenth of the input
@@ -63,16 +63,13 @@ func check_length(input string) string {
 }
 
 //return 0X01 结束
-func Recv(m *collector.CollectorDataT) (byte ,string) {
-	
-	if m.Option == "handleIAL_INVOKE" {
-		if m.TransInfo.CallType == "CALL"{
-			// external call, get contract name and input, check if the method is in the jumptable
-			input := hex.EncodeToString(m.TransInfo.CallInfo.InputData)
-			result := check_length(input)
-			if result == "1"{
-				return 0x01,input
-			}
+func handle_INVOKE(m *collector.CollectorDataT) (byte ,string) {
+	if m.TransInfo.CallType == "CALL"{
+		// external call, get contract name and input, check if the method is in the jumptable
+		input := hex.EncodeToString(m.TransInfo.CallInfo.InputData)
+		result := check_length(input)
+		if result == "1"{
+			return 0x01,input
 		}
 	}
 

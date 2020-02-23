@@ -11,9 +11,9 @@ import (
 // var logger pluginlog.ErrTxLog
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-type RunOpCode struct {
-	MethodName string   `json:"methodname"`
-	OpCode     []string `json:"option"`
+type RegisterInfo struct {
+	PluginName string   `json:"pluginname"`
+	OpCode     map[string]string `json:"option"`
 }
 
 type DaoInfo struct {
@@ -47,96 +47,96 @@ var (
 )
 
 // 插件入口函数：梦开始的地方
-func Run() []byte {
-	var data = RunOpCode{
-		MethodName: "P1",
-		OpCode:     []string{"EXTERNALINFOSTART", "EXTERNALINFOEND", "CALLSTART", "CALLEND", "CALLCODESTART", "CALLCODEEND"},
+func Register() []byte {
+	var data = RegisterInfo{
+		PluginName: "detect_reentry",
+		OpCode: map[string]string{"EXTERNALINFOSTART":"handle_EXTERNALINFOSTART", "EXTERNALINFOEND":"handle_EXTERNALINFOEND", "CALLSTART":"handle_CALLSTART", "CALLEND":"handle_CALLEND", "CALLCODESTART":"handle_CALLSTART", "CALLCODEEND":"handle_CALLEND"},
 	}
 
 	// logger.InitialFileLog("./plugin_log/thedaolog/thedaolog")
-	b, err := json.Marshal(&data)
+	retInfo, err := json.Marshal(&data)
 	if err != nil {
 		return []byte{}
 	}
 
-	return b
+	return retInfo
 }
 
-// 数据处理函数：做梦的地方
-func Recv(m *collector.CollectorDataT) (byte, string) {
-	switch m.Option {
-	// 该OpCode 是外部调用开始	
-	case "EXTERNALINFOSTART":
-		txhash = m.TransInfo.TxHash
-		blocknumber = m.TransInfo.BlockNumber
-		var val big.Int
-		val.SetString(m.TransInfo.Value, 10)
-		head = Node {
-			// 统一小写
-			address:     strings.ToLower(m.TransInfo.From),
-			invalue:     *big.NewInt(int64(0)),
-			outvalue:    val,
-			parent:      nil,
-			children:    nil,
-			ancestors:   nil,
-		}
-		root = Node {
-			// 统一小写
-			address:     strings.ToLower(m.TransInfo.To),
-			invalue:     val,
-			outvalue:    *big.NewInt(int64(0)),
-			// parent:      &head,
-			parent:      nil,
-			children:    nil,
-			ancestors:   nil,
-		}
-		// 理论上EOA 没啥关系
-		// root.ancestors = append(root.ancestors, &head)
-		// head.children = append(head.children, &root)
-		cur_p = &root
+func handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte, string) {
+	txhash = m.TransInfo.TxHash
+	blocknumber = m.TransInfo.BlockNumber
+	var val big.Int
+	val.SetString(m.TransInfo.Value, 10)
+	head = Node {
+		// 统一小写
+		address:     strings.ToLower(m.TransInfo.From),
+		invalue:     *big.NewInt(int64(0)),
+		outvalue:    val,
+		parent:      nil,
+		children:    nil,
+		ancestors:   nil,
+	}
+	root = Node {
+		// 统一小写
+		address:     strings.ToLower(m.TransInfo.To),
+		invalue:     val,
+		outvalue:    *big.NewInt(int64(0)),
+		// parent:      &head,
+		parent:      nil,
+		children:    nil,
+		ancestors:   nil,
+	}
+	// 理论上EOA 没啥关系
+	// root.ancestors = append(root.ancestors, &head)
+	// head.children = append(head.children, &root)
+	cur_p = &root
+	return 0x00, ""
+}
 
-	// 该OpCode 是内部调用开始
-	case "CALLSTART", "CALLCODESTART":
-		var val big.Int
-		val.SetString(m.InsInfo.Value, 10)
-		node := Node {
-			// 统一小写
-			address:     strings.ToLower(m.InsInfo.To),
-			invalue:     val,
-			outvalue:    *big.NewInt(int64(0)),
-			parent:      cur_p,
-			children:    nil,
-			ancestors:   nil,
-		}
-		node.ancestors = append([]*Node{cur_p}, cur_p.ancestors...)
-		cur_p.children = append(cur_p.children, &node)
-		cur_p.outvalue.Add(&cur_p.outvalue, &val)
-		cur_p = &node
+func handle_CALLSTART(m *collector.CollectorDataT) (byte, string) {
+	var val big.Int
+	val.SetString(m.InsInfo.Value, 10)
+	node := Node {
+		// 统一小写
+		address:     strings.ToLower(m.InsInfo.To),
+		invalue:     val,
+		outvalue:    *big.NewInt(int64(0)),
+		parent:      cur_p,
+		children:    nil,
+		ancestors:   nil,
+	}
+	node.ancestors = append([]*Node{cur_p}, cur_p.ancestors...)
+	cur_p.children = append(cur_p.children, &node)
+	cur_p.outvalue.Add(&cur_p.outvalue, &val)
+	cur_p = &node
+	return 0x00, ""
+}
 
-	// 该OpCode 是内部调用结束
-	case "CALLEND", "CALLCODEEND":
-		cur_p = cur_p.parent
-		// 如果当前调用失败，在树中删除相应节点
-		if !m.InsInfo.IsInternalSucceeded || !m.InsInfo.IsCallValid {
-			cur_p.children = cur_p.children[:len(cur_p.children)-1]
-		}
-
-	// 该OpCode 是外部调用结束
-	case "EXTERNALINFOEND":
-		// 使用的gas
-		gasused = m.TransInfo.GasUsed
-		// 如果该交易失败
-		if !m.TransInfo.IsSuccess {
-			return 0x00, ""
-		}
-		// 处理环 && 调用关系
-		result := procCycleInfo()
-		if result != ""{
-			return 0x01, result
-		}
+func handle_CALLEND(m *collector.CollectorDataT) (byte, string) {
+	cur_p = cur_p.parent
+	// 如果当前调用失败，在树中删除相应节点
+	if !m.InsInfo.IsInternalSucceeded || !m.InsInfo.IsCallValid {
+		cur_p.children = cur_p.children[:len(cur_p.children)-1]
 	}
 	return 0x00, ""
 }
+
+func handle_EXTERNALINFOEND(m *collector.CollectorDataT) (byte, string) {
+	// 使用的gas
+	gasused = m.TransInfo.GasUsed
+	// 如果该交易失败
+	if !m.TransInfo.IsSuccess {
+		return 0x00, ""
+	}
+	// 处理环 && 调用关系
+	result := procCycleInfo()
+	if result != ""{
+		return 0x01, result
+	}
+	return 0x00, ""
+}
+
+
 
 // 判断有没有环，顺便把所有的调用记录下来
 func procCycleInfo() string {
