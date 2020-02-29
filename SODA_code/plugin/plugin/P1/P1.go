@@ -50,7 +50,7 @@ var (
 func Register() []byte {
 	var data = RegisterInfo{
 		PluginName: "detect_reentry",
-		OpCode: map[string]string{"EXTERNALINFOSTART":"handle_EXTERNALINFOSTART", "EXTERNALINFOEND":"handle_EXTERNALINFOEND", "CALLSTART":"handle_CALLSTART", "CALLEND":"handle_CALLEND", "CALLCODESTART":"handle_CALLSTART", "CALLCODEEND":"handle_CALLEND"},
+		OpCode: map[string]string{"EXTERNALINFOSTART":"Handle_EXTERNALINFOSTART", "EXTERNALINFOEND":"Handle_EXTERNALINFOEND", "CALLSTART":"Handle_CALLSTART", "CALLEND":"Handle_CALLEND", "CALLCODESTART":"Handle_CALLSTART", "CALLCODEEND":"Handle_CALLEND"},
 	}
 
 	// logger.InitialFileLog("./plugin_log/thedaolog/thedaolog")
@@ -62,7 +62,7 @@ func Register() []byte {
 	return retInfo
 }
 
-func handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte, string) {
+func Handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte, string) {
 	txhash = m.TransInfo.TxHash
 	blocknumber = m.TransInfo.BlockNumber
 	var val big.Int
@@ -93,7 +93,7 @@ func handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte, string) {
 	return 0x00, ""
 }
 
-func handle_CALLSTART(m *collector.CollectorDataT) (byte, string) {
+func Handle_CALLSTART(m *collector.CollectorDataT) (byte, string) {
 	var val big.Int
 	val.SetString(m.InsInfo.Value, 10)
 	node := Node {
@@ -112,7 +112,7 @@ func handle_CALLSTART(m *collector.CollectorDataT) (byte, string) {
 	return 0x00, ""
 }
 
-func handle_CALLEND(m *collector.CollectorDataT) (byte, string) {
+func Handle_CALLEND(m *collector.CollectorDataT) (byte, string) {
 	cur_p = cur_p.parent
 	// 如果当前调用失败，在树中删除相应节点
 	if !m.InsInfo.IsInternalSucceeded || !m.InsInfo.IsCallValid {
@@ -121,7 +121,7 @@ func handle_CALLEND(m *collector.CollectorDataT) (byte, string) {
 	return 0x00, ""
 }
 
-func handle_EXTERNALINFOEND(m *collector.CollectorDataT) (byte, string) {
+func Handle_EXTERNALINFOEND(m *collector.CollectorDataT) (byte, string) {
 	// 使用的gas
 	gasused = m.TransInfo.GasUsed
 	// 如果该交易失败

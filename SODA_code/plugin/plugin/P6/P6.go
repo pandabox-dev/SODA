@@ -26,7 +26,7 @@ func Register() []byte {
 	// fmt.Println("enter run")
 	var data = RegisterInfo{
 		PluginName: "P6",
-		OpCode: map[string]string{"EXTERNALINFOSTART":"handle_EXTERNALINFOSTART", "EXTERNALINFOEND":"handle_EXTERNALINFOEND", "EVENT":"handle_EVENT"},
+		OpCode: map[string]string{"EXTERNALINFOSTART":"Handle_EXTERNALINFOSTART", "EXTERNALINFOEND":"Handle_EXTERNALINFOEND", "EVENT":"Handle_EVENT"},
 	}
 
 	standard_func_flag = 0
@@ -40,7 +40,7 @@ func Register() []byte {
 	return retInfo
 }
 
-func handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte ,string){
+func Handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte ,string){
 	standard_func_flag = 0
 	event_flag = 0
 	if m.TransInfo.CallType == "CALL"{   // external call, get contract name and input, check if the method is in the jumptable
@@ -56,7 +56,7 @@ func handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func handle_EVENT(m *collector.CollectorDataT) (byte ,string){
+func Handle_EVENT(m *collector.CollectorDataT) (byte ,string){
 	if len(m.InsInfo.OpArgs) < 3{
 		return 0x00,""
 	}
@@ -72,7 +72,7 @@ func handle_EVENT(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func handle_EXTERNALINFOEND(m *collector.CollectorDataT) (byte ,string){
+func Handle_EXTERNALINFOEND(m *collector.CollectorDataT) (byte ,string){
 	if m.TransInfo.IsSuccess{
 		if standard_func_flag == 1 && event_flag == 0{
 			return 0x01,""

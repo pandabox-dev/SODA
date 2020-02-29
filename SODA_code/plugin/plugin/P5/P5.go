@@ -27,7 +27,7 @@ func Register() []byte {
 	
 	var data = RegisterInfo{
 		PluginName: "P5",
-		OpCode: map[string]string{"IAL_BYTECODE":"handle_BYTECODE","TXSTART":"handle_TXSTART","CALLSTART":"handle_CALLINFO","CALLCODESTART":"handle_CALLINFO","DELEGATECALLSTART":"handle_CALLINFO","CALLEND":"handle_CALLEND","CALLCODEEND":"handle_CALLEND","DELEGATECALLEND":"handle_CALLEND"},
+		OpCode: map[string]string{"IAL_BYTECODE":"Handle_BYTECODE","TXSTART":"Handle_TXSTART","CALLSTART":"Handle_CALLINFO","CALLCODESTART":"Handle_CALLINFO","DELEGATECALLSTART":"Handle_CALLINFO","CALLEND":"Handle_CALLEND","CALLCODEEND":"Handle_CALLEND","DELEGATECALLEND":"Handle_CALLEND"},
 	}
 
 	contract_map = make(map[string]string)
@@ -201,7 +201,7 @@ func PcInDict(pc uint64, bytecodeHash string) int {
 	return 0
 }
 
-func handle_BYTECODE(m *collector.CollectorDataT) (byte ,string){
+func Handle_BYTECODE(m *collector.CollectorDataT) (byte ,string){
 	if m.TransInfo.CallType == "CREATE" {
 		contract := m.TransInfo.To
 		contract = strings.ToLower(contract)
@@ -220,12 +220,12 @@ func handle_BYTECODE(m *collector.CollectorDataT) (byte ,string){
 	return 0X00,""
 }
 
-func handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
+func Handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
 	layer_dict = make(map[int]string)
 	return 0x00,""
 }
 
-func handle_CALLINFO(m *collector.CollectorDataT) (byte ,string){
+func Handle_CALLINFO(m *collector.CollectorDataT) (byte ,string){
 	contract := m.InsInfo.From
 	toaddr := m.InsInfo.To
 	contract = strings.ToLower(contract)
@@ -241,7 +241,7 @@ func handle_CALLINFO(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,"" 
 }
 
-func handle_CALLEND(m *collector.CollectorDataT) (byte ,string) {
+func Handle_CALLEND(m *collector.CollectorDataT) (byte ,string) {
 	layer := m.InsInfo.CallLayer
 	issuccess := m.InsInfo.IsInternalSucceeded
 	if _,ok := layer_dict[layer];ok{

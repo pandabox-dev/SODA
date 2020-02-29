@@ -124,7 +124,7 @@ func Register() []byte {
 	// fmt.Println("plugin run")
 	var data = RegisterInfo{
 		PluginName: "P2",
-		OpCode: map[string]string{"IAL_BYTECODE":"handle_BYTECODE","IAL_INVOKE":"handle_INVOKE"},
+		OpCode: map[string]string{"IAL_BYTECODE":"Handle_BYTECODE","IAL_INVOKE":"Handle_INVOKE"},
 	}
 	bytecodeHash_map = make(map[string]map[string]int)
 
@@ -179,7 +179,7 @@ func add_to_dict(runtimecode []byte) {
 	}
 }
 
-func handle_INVOKE(m *collector.CollectorDataT) (byte ,string){
+func Handle_INVOKE(m *collector.CollectorDataT) (byte ,string){
 	if m.TransInfo.CallType == "CALL"{   // external call, get contract name and input, check if the method is in the jumptable
 		input := hex.EncodeToString(m.TransInfo.CallInfo.InputData)
 		if len(m.TransInfo.CallInfo.ContractCode) > 0{
@@ -193,7 +193,7 @@ func handle_INVOKE(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func handle_BYTECODE(m *collector.CollectorDataT) (byte ,string) {
+func Handle_BYTECODE(m *collector.CollectorDataT) (byte ,string) {
 	if m.TransInfo.CallType == "CREATE"{
 		runtimecode := m.TransInfo.CreateInfo.ContractRuntimeCode
 		if len(runtimecode) > 0{

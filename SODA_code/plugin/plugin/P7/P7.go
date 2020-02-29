@@ -27,7 +27,7 @@ type RegisterInfo struct {
 func Register() []byte {
 	var data = RegisterInfo{
 		PluginName: "P7",
-		OpCode: map[string]string{"TXSTART":"handle_TXSTART", "NOT":"handle_COMPARE", "LT":"handle_COMPARE", "GT":"handle_COMPARE", "SLT":"handle_COMPARE", "SGT":"handle_COMPARE", "BALANCE":"handle_BALANCE", "EQ":"handle_EQ", "ISZERO":"handle_COMPARE"},
+		OpCode: map[string]string{"TXSTART":"Handle_TXSTART", "NOT":"Handle_COMPARE", "LT":"Handle_COMPARE", "GT":"Handle_COMPARE", "SLT":"Handle_COMPARE", "SGT":"Handle_COMPARE", "BALANCE":"Handle_BALANCE", "EQ":"Handle_EQ", "ISZERO":"Handle_COMPARE"},
 	}
 	initial()
 
@@ -46,12 +46,12 @@ func initial() {
 	balance_layer = 0
 }
 
-func handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
+func Handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
 	initial()
 	return 0x00,""
 }
 
-func handle_BALANCE(m *collector.CollectorDataT) (byte ,string){
+func Handle_BALANCE(m *collector.CollectorDataT) (byte ,string){
 	if m.InsInfo.OpResult != ""{
 		cmp_flag = 0
 		balance_layer = m.InsInfo.CallLayer
@@ -60,7 +60,7 @@ func handle_BALANCE(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func handle_EQ(m *collector.CollectorDataT) (byte ,string){
+func Handle_EQ(m *collector.CollectorDataT) (byte ,string){
 	if len(m.InsInfo.OpArgs) == 2 && cmp_flag == 0{ 
 		result_flag := 0
 		current_layer := m.InsInfo.CallLayer
@@ -79,7 +79,7 @@ func handle_EQ(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func handle_COMPARE(m *collector.CollectorDataT) (byte ,string) {
+func Handle_COMPARE(m *collector.CollectorDataT) (byte ,string) {
 	cmp_flag = 1
 	return 0x00,""
 }

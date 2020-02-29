@@ -24,7 +24,7 @@ func Register() []byte {
 	// fmt.Println("enter run")
 	var data = RegisterInfo{
 		PluginName: "P8",
-		OpCode: map[string]string{"TXSTART":"handle_TXSTART", "IAL_COMPARISON":"handle_COMPARISON", "NUMBER":"handle_NUMBERTIME", "TIMESTAMP":"handle_NUMBERTIME"},
+		OpCode: map[string]string{"TXSTART":"Handle_TXSTART", "IAL_COMPARISON":"Handle_COMPARISON", "NUMBER":"Handle_NUMBERTIME", "TIMESTAMP":"Handle_NUMBERTIME"},
 	}
 
 	dependecy_map = make(map[int]map[string]int)
@@ -37,12 +37,12 @@ func Register() []byte {
 	return retInfo
 }
 
-func handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
+func Handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
 	dependecy_map = make(map[int]map[string]int)
 	return 0x00,""
 }
 
-func handle_NUMBERTIME(m *collector.CollectorDataT) (byte ,string){
+func Handle_NUMBERTIME(m *collector.CollectorDataT) (byte ,string){
 	current_layer := m.InsInfo.CallLayer
 	need_result := m.InsInfo.OpResult
 	if _,ok := dependecy_map[current_layer]; ok{
@@ -55,7 +55,7 @@ func handle_NUMBERTIME(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func handle_COMPARISON(m *collector.CollectorDataT) (byte ,string){
+func Handle_COMPARISON(m *collector.CollectorDataT) (byte ,string){
 	current_layer := m.InsInfo.CallLayer
 	if _, ok := dependecy_map[current_layer]; ok{
 		for _,i_str := range m.InsInfo.OpArgs{

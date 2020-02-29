@@ -26,7 +26,7 @@ func Register() []byte {
 	// fmt.Println("enter run")
 	var data = RegisterInfo{
 		PluginName: "P4",
-		OpCode: map[string]string{"TXSTART":"handle_TXSTART", "EQ":"handle_EQ", "ORIGIN":"handle_ORIGIN","CALLSTART":"handle_CALLINFO","CALLCODESTART":"handle_CALLINFO","DELEGATECALLSTART":"handle_CALLINFO","STATICCALLSTART":"handle_CALLINFO"},
+		OpCode: map[string]string{"TXSTART":"Handle_TXSTART", "EQ":"Handle_EQ", "ORIGIN":"Handle_ORIGIN","CALLSTART":"Handle_CALLINFO","CALLCODESTART":"Handle_CALLINFO","DELEGATECALLSTART":"Handle_CALLINFO","STATICCALLSTART":"Handle_CALLINFO"},
 	}
 	origin_map = make(map[int]map[string]int)
 	sender_map = make(map[int]string)
@@ -40,7 +40,7 @@ func Register() []byte {
 }
 
 
-func handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
+func Handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
 	origin_map = make(map[int]map[string]int)
 	sender_map = make(map[int]string)
 	current_layer := m.TransInfo.CallLayer
@@ -50,14 +50,14 @@ func handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func handle_CALLINFO(m *collector.CollectorDataT) (byte ,string){
+func Handle_CALLINFO(m *collector.CollectorDataT) (byte ,string){
 	current_layer := m.InsInfo.CallLayer
 	sender := m.InsInfo.From
 	sender_map[current_layer] = sender
 	return 0x00,""
 }
 
-func handle_EQ(m *collector.CollectorDataT) (byte ,string){
+func Handle_EQ(m *collector.CollectorDataT) (byte ,string){
 	current_layer := m.InsInfo.CallLayer
 	if _, ok := origin_map[current_layer]; ok{  // eq appear where origin appear
 		for _,i_str := range m.InsInfo.OpArgs{
@@ -80,7 +80,7 @@ func handle_EQ(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func handle_ORIGIN(m *collector.CollectorDataT) (byte ,string){
+func Handle_ORIGIN(m *collector.CollectorDataT) (byte ,string){
 	current_layer := m.InsInfo.CallLayer
 	origin_addr := m.InsInfo.OpResult
 	// origin_addr_big,_ := new(big.Int).SetString(origin_addr,10)
