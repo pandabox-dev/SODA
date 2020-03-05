@@ -37,14 +37,14 @@ func Register() []byte {
 	return retInfo
 }
 
-func Handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
+func Handle_TXSTART(m *collector.AllCollector) (byte ,string){
 	dependecy_map = make(map[int]map[string]int)
 	return 0x00,""
 }
 
-func Handle_NUMBERTIME(m *collector.CollectorDataT) (byte ,string){
+func Handle_NUMBERTIME(m *collector.AllCollector) (byte ,string){
 	current_layer := m.InsInfo.CallLayer
-	need_result := m.InsInfo.OpResult
+	need_result := m.InsInfo.OpInOut.OpResult  // add tutu
 	if _,ok := dependecy_map[current_layer]; ok{
 		dependecy_map[current_layer][need_result] = 0
 	}else{
@@ -55,10 +55,10 @@ func Handle_NUMBERTIME(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func Handle_COMPARISON(m *collector.CollectorDataT) (byte ,string){
+func Handle_COMPARISON(m *collector.AllCollector) (byte ,string){
 	current_layer := m.InsInfo.CallLayer
 	if _, ok := dependecy_map[current_layer]; ok{
-		for _,i_str := range m.InsInfo.OpArgs{
+		for _,i_str := range m.InsInfo.OpInOut.OpArgs{  //add tutu
 			if _, ok1 := dependecy_map[current_layer][i_str]; ok1 {
 				return 0x01,""
 			}

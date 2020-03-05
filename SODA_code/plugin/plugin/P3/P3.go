@@ -63,7 +63,7 @@ func check_length(input string) string {
 }
 
 //return 0X01 结束
-func Handle_INVOKE(m *collector.CollectorDataT) (byte ,string) {
+func Handle_INVOKE(m *collector.AllCollector) (byte ,string) {
 	if m.TransInfo.CallType == "CALL"{
 		// external call, get contract name and input, check if the method is in the jumptable
 		input := hex.EncodeToString(m.TransInfo.CallInfo.InputData)

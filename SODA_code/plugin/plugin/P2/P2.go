@@ -179,7 +179,7 @@ func add_to_dict(runtimecode []byte) {
 	}
 }
 
-func Handle_INVOKE(m *collector.CollectorDataT) (byte ,string){
+func Handle_INVOKE(m *collector.AllCollector) (byte ,string){
 	if m.TransInfo.CallType == "CALL"{   // external call, get contract name and input, check if the method is in the jumptable
 		input := hex.EncodeToString(m.TransInfo.CallInfo.InputData)
 		if len(m.TransInfo.CallInfo.ContractCode) > 0{
@@ -193,7 +193,7 @@ func Handle_INVOKE(m *collector.CollectorDataT) (byte ,string){
 	return 0x00,""
 }
 
-func Handle_BYTECODE(m *collector.CollectorDataT) (byte ,string) {
+func Handle_BYTECODE(m *collector.AllCollector) (byte ,string) {
 	if m.TransInfo.CallType == "CREATE"{
 		runtimecode := m.TransInfo.CreateInfo.ContractRuntimeCode
 		if len(runtimecode) > 0{

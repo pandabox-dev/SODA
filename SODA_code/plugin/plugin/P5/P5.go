@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 	// "bufio"
-	"strconv"
+	// "strconv"
 	"hash/fnv"
 	"encoding/hex"
 	"github.com/json-iterator/go"
@@ -15,8 +15,6 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 var bytecodeHash_map map[string]map[uint64]int    // store contract and pc list
 var contract_map map[string]string
-var layer_dict map[int]string
-
 
 type RegisterInfo struct {
 	PluginName string   `json:"pluginname"`
@@ -27,7 +25,7 @@ func Register() []byte {
 	
 	var data = RegisterInfo{
 		PluginName: "P5",
-		OpCode: map[string]string{"IAL_BYTECODE":"Handle_BYTECODE","TXSTART":"Handle_TXSTART","CALLSTART":"Handle_CALLINFO","CALLCODESTART":"Handle_CALLINFO","DELEGATECALLSTART":"Handle_CALLINFO","CALLEND":"Handle_CALLEND","CALLCODEEND":"Handle_CALLEND","DELEGATECALLEND":"Handle_CALLEND"},
+		OpCode: map[string]string{"IAL_BYTECODE":"Handle_BYTECODE","TRANS_CALL":"Handle_CALLINFO","TRANS_CALLCODE":"Handle_CALLINFO","TRANS_DELEGATECALL":"Handle_CALLINFO"},
 	}
 
 	contract_map = make(map[string]string)
@@ -201,7 +199,7 @@ func PcInDict(pc uint64, bytecodeHash string) int {
 	return 0
 }
 
-func Handle_BYTECODE(m *collector.CollectorDataT) (byte ,string){
+func Handle_BYTECODE(m *collector.AllCollector) (byte ,string){
 	if m.TransInfo.CallType == "CREATE" {
 		contract := m.TransInfo.To
 		contract = strings.ToLower(contract)
@@ -220,37 +218,24 @@ func Handle_BYTECODE(m *collector.CollectorDataT) (byte ,string){
 	return 0X00,""
 }
 
-func Handle_TXSTART(m *collector.CollectorDataT) (byte ,string){
-	layer_dict = make(map[int]string)
-	return 0x00,""
-}
 
-func Handle_CALLINFO(m *collector.CollectorDataT) (byte ,string){
-	contract := m.InsInfo.From
-	toaddr := m.InsInfo.To
-	contract = strings.ToLower(contract)
-	pc := m.InsInfo.Pc 
-	layer := m.InsInfo.CallLayer
-	bytecodeHash := contract_map[contract]
-	if len(m.InsInfo.ByteCode) > 0{
+func Handle_CALLINFO(m *collector.AllCollector) (byte ,string){
+	if m.TransInfo.CallType == "CALL" {
+		contract := m.TransInfo.From 
+		toaddr := m.TransInfo.To
+		contract = strings.ToLower(contract)
+		pc := m.TransInfo.Pc 
+		layer := m.TransInfo.CallLayer
+		bytecodeHash := contract_map[contract]
 		get_result := PcInDict(pc, bytecodeHash)
-		if get_result == 1{
-			layer_dict[layer] = contract + "#" + toaddr +"#"+ strconv.Itoa(layer)+"#"+fmt.Sprintf("%v", pc)
+		if get_result == 1 && m.TransInfo.IsSuccess==false && len(m.TransInfo.CallInfo.ContractCode)>0{
+			return 0x01 , contract + "#" + toaddr +"#"+fmt.Sprintf("%v", layer)+"#"+fmt.Sprintf("%v", pc)
 		}
 	}
-	return 0x00,"" 
-}
-
-func Handle_CALLEND(m *collector.CollectorDataT) (byte ,string) {
-	layer := m.InsInfo.CallLayer
-	issuccess := m.InsInfo.IsInternalSucceeded
-	if _,ok := layer_dict[layer];ok{
-		if !issuccess {
-			return 0x01,layer_dict[layer]
-		}
-	}
-
 	return 0x00,""
 }
+
+
+
 
 

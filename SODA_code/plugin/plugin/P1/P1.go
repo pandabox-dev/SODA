@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-// var logger pluginlog.ErrTxLog
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type RegisterInfo struct {
@@ -44,16 +43,17 @@ var (
 	txhash string // 交易hash
 	gasused uint64 // 交易的gas
 	blocknumber string // 交易的块高
+
+	collectors []*collector.AllCollector // 当前交易的所有数据
 )
 
 // 插件入口函数：梦开始的地方
 func Register() []byte {
 	var data = RegisterInfo{
-		PluginName: "detect_reentry",
+		PluginName: "P1",
 		OpCode: map[string]string{"EXTERNALINFOSTART":"Handle_EXTERNALINFOSTART", "EXTERNALINFOEND":"Handle_EXTERNALINFOEND", "CALLSTART":"Handle_CALLSTART", "CALLEND":"Handle_CALLEND", "CALLCODESTART":"Handle_CALLSTART", "CALLCODEEND":"Handle_CALLEND"},
 	}
 
-	// logger.InitialFileLog("./plugin_log/thedaolog/thedaolog")
 	retInfo, err := json.Marshal(&data)
 	if err != nil {
 		return []byte{}
@@ -62,7 +62,8 @@ func Register() []byte {
 	return retInfo
 }
 
-func Handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte, string) {
+func Handle_EXTERNALINFOSTART(m *collector.AllCollector) (byte, string) {
+	collectors = []*collector.AllCollector{m}
 	txhash = m.TransInfo.TxHash
 	blocknumber = m.TransInfo.BlockNumber
 	var val big.Int
@@ -93,12 +94,13 @@ func Handle_EXTERNALINFOSTART(m *collector.CollectorDataT) (byte, string) {
 	return 0x00, ""
 }
 
-func Handle_CALLSTART(m *collector.CollectorDataT) (byte, string) {
+func Handle_CALLSTART(m *collector.AllCollector) (byte, string) {
+	collectors = append(collectors, m)
 	var val big.Int
-	val.SetString(m.InsInfo.Value, 10)
+	val.SetString(m.InsInfo.AccountValue.Value, 10)  //add tutu
 	node := Node {
 		// 统一小写
-		address:     strings.ToLower(m.InsInfo.To),
+		address:     strings.ToLower(m.InsInfo.AccountValue.ToAddr),  //add tutu
 		invalue:     val,
 		outvalue:    *big.NewInt(int64(0)),
 		parent:      cur_p,
@@ -112,16 +114,20 @@ func Handle_CALLSTART(m *collector.CollectorDataT) (byte, string) {
 	return 0x00, ""
 }
 
-func Handle_CALLEND(m *collector.CollectorDataT) (byte, string) {
+func Handle_CALLEND(m *collector.AllCollector) (byte, string) {
+	collectors = append(collectors, m)
 	cur_p = cur_p.parent
 	// 如果当前调用失败，在树中删除相应节点
-	if !m.InsInfo.IsInternalSucceeded || !m.InsInfo.IsCallValid {
+	if !m.InsInfo.CheckErr.IsInternalSucceeded || !m.InsInfo.CheckErr.IsCallValid {  //add tutu
+		// 2020/3/2添加，失败了减去父节点相应的outvalue
+		cur_p.outvalue.Sub(&cur_p.outvalue, &cur_p.children[len(cur_p.children)-1].invalue)
 		cur_p.children = cur_p.children[:len(cur_p.children)-1]
 	}
 	return 0x00, ""
 }
 
-func Handle_EXTERNALINFOEND(m *collector.CollectorDataT) (byte, string) {
+func Handle_EXTERNALINFOEND(m *collector.AllCollector) (byte, string) {
+	collectors = append(collectors, m)
 	// 使用的gas
 	gasused = m.TransInfo.GasUsed
 	// 如果该交易失败
@@ -135,8 +141,6 @@ func Handle_EXTERNALINFOEND(m *collector.CollectorDataT) (byte, string) {
 	}
 	return 0x00, ""
 }
-
-
 
 // 判断有没有环，顺便把所有的调用记录下来
 func procCycleInfo() string {
@@ -321,23 +325,32 @@ func procCycleVictims(cycleArr []*Node) (string, *big.Int) {
 	return victim, value
 }
 
+// 打印出所有调用，调试用
+func getCall() string {
+	var res = ""
+	for _, m := range collectors {
+		res += m.Option + "@ " + m.InsInfo.AccountValue.FromAddr + "--" + m.InsInfo.AccountValue.ToAddr + ": " + m.InsInfo.AccountValue.Value + "\n"
+	}
+	return res
+}
+
 // 打印出树，调试用
-func printTree(node *Node) string {
-	if node.children == nil {
+func getTree(node *Node) string {
+	if len(node.children) == 0 {
 		var ancestorsAddr []string
 		for _, ancestor := range node.ancestors {
 			ancestorsAddr = append(ancestorsAddr, ancestor.address)
 		}
-		return fmt.Sprintf("{\"address\": \"%s\", \"ancestors\": \"%s\"}", node.address, strings.Join(ancestorsAddr, ", "))
+		return fmt.Sprintf("{\"address\": \"%s\", \"ancestors\": \"%s\", \"outvalue\": \"%s\"}", node.address, strings.Join(ancestorsAddr, ", "), node.outvalue.String())
 	} else {
 		var ancestorsAddr []string
 		for _, ancestor := range node.ancestors {
 			ancestorsAddr = append(ancestorsAddr, ancestor.address)
 		}
-		res := fmt.Sprintf("{\"address\": \"%s\", \"ancestors\": \"%s\", \"children\": [", node.address, strings.Join(ancestorsAddr, ", "))
+		res := fmt.Sprintf("{\"address\": \"%s\", \"ancestors\": \"%s\", \"outvalue\": \"%s\", \"children\": [", node.address, strings.Join(ancestorsAddr, ", "), node.outvalue.String())
 		var childJsonArr []string
 		for _, child := range node.children {
-			childJsonArr = append(childJsonArr, printTree(child))
+			childJsonArr = append(childJsonArr, getTree(child))
 		}
 		res += strings.Join(childJsonArr, ", ")
 		res += "]}"
