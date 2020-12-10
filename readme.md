@@ -1,5 +1,5 @@
 # SODA_code
-SODA is a novel generic online detection framework for smart contracts on blockchains that support Ethereum virtual machine (EVM). We released the 8 detection apps here and we will release the source code of the framework soon.  
+SODA is a novel generic online detection framework for smart contracts on blockchains that support Ethereum virtual machine (EVM). We released the 8 detection apps and the source code of the framework here.  
 
 We developed the framework SODA based on go-ethereum v1.9.0 (https://github.com/ethereum/go-ethereum/tree/v1.9.0) in Ubuntu 16.06.
 
@@ -16,7 +16,8 @@ The source code of 8 detection apps is under the path ```SODA_code/plugin/plugin
 8. Finally, you will find the result of each app in the folder ```plugin_log```.
 
 # Result
-P1 is an app for detecting a malicious re-entrancy aiming at stealing ETH. The result of P1 is listed in the table ```P1_result.xlsx```. We didn't list other apps' results due to the huge amount of data. 
+P1 is an app for detecting a malicious re-entrancy aiming at stealing ETH. The result of P1 is listed in the table ```P1_result.xlsx```.   
+We have listed all 8 apps' results at https://drive.google.com/drive/folders/1gHAlmivO1zntSaAoZjoSymG0sQS8lv32?usp=sharing.
 
 # Paper
 You can find our paper about the design, implementation, and experimental results of SODA at https://www.ndss-symposium.org/wp-content/uploads/2020/02/24449.pdf.
