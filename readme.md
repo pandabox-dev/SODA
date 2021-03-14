@@ -7,7 +7,7 @@ The source code of 8 detection apps is under the path ```SODA_code/plugin/plugin
 
 ## How to use this framework and the 8 detection apps
 1. Use ```go env``` to check your paths of ```GOPATH``` and ```GOROOT``` in your Ubuntu.
-2. Copy the file ```collector.go``` in the path ```SODA_code/collector``` to the path ```GOROOT/src/github.com/Ethereum/collector``` (if a directory does not exist, create it).
+2. Copy the file ```collector.go``` in the path ```SODA_code/collector``` to the path ```GOROOT/src/github.com/ethereum/collector``` (if a directory does not exist, create it).
 3. Copy the folder ```json-iterator``` and ```modern-go``` in the path ```SODA_code/go-ethereum/vendor/github.com``` to the path ```GOPATH/src/github.com``` (if a directory does not exist, create it).
 4. Enter the folder ```SODA_code/go-ethereum```, use ```make geth``` to compile the framework, and then you can get ```geth``` from the path ```SODA_code/go-ethereum/build/bin```.
 5. Enter the path ```SODA_code/plugin/plugin/P1```, and then use ```go build –buildmode=plugin P1.go``` to get ```P1.so```.
